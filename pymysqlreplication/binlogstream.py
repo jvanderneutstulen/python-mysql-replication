@@ -138,6 +138,7 @@ class BinLogStreamReader(object):
                  freeze_schema=False, skip_to_timestamp=None,
                  report_slave=None, slave_uuid=None,
                  pymysql_wrapper=None,
+                 fail_on_database_disconnect=False,
                  fail_on_table_metadata_unavailable=False,
                  slave_heartbeat=None,
                  is_mariadb=False):
@@ -166,6 +167,7 @@ class BinLogStreamReader(object):
                                timestamp.
             report_slave: Report slave in SHOW SLAVE HOSTS.
             slave_uuid: Report slave_uuid in SHOW SLAVE HOSTS.
+            fail_on_database_disconnect: Raise exception on database disconnect.
             fail_on_table_metadata_unavailable: Should raise exception if we
                                                 can't get table information on
                                                 row_events
@@ -197,6 +199,7 @@ class BinLogStreamReader(object):
         self.__freeze_schema = freeze_schema
         self.__allowed_events = self._allowed_event_list(
             only_events, ignored_events, filter_non_implemented_events)
+        self.__fail_on_database_disconnect = fail_on_database_disconnect
         self.__fail_on_table_metadata_unavailable = fail_on_table_metadata_unavailable
 
         # We can't filter on packet level TABLE_MAP and rotate event because
@@ -483,7 +486,8 @@ class BinLogStreamReader(object):
                 if code in MYSQL_EXPECTED_ERROR_CODES:
                     self._stream_connection.close()
                     self.__connected_stream = False
-                    continue
+                    if not self.__fail_on_database_disconnect:
+                        continue
                 raise
 
             if pkt.is_eof_packet():
