@@ -188,6 +188,7 @@ class BinLogStreamReader(object):
         ignore_decode_errors=False,
         verify_checksum=False,
         enable_logging=True,
+        fail_on_database_disconnect=False,
     ):
         """
         Attributes:
@@ -230,6 +231,7 @@ class BinLogStreamReader(object):
             verify_checksum: If true, verify events read from the binary log by examining checksums.
             enable_logging: When set to True, logs various details helpful for debugging and monitoring
                             When set to False, logging is disabled to enhance performance.
+            fail_on_database_disconnect: Raise exception on database disconnect.
         """
 
         self.__connection_settings = connection_settings
@@ -253,6 +255,7 @@ class BinLogStreamReader(object):
         )
         self.__ignore_decode_errors = ignore_decode_errors
         self.__verify_checksum = verify_checksum
+        self.__fail_on_database_disconnect = fail_on_database_disconnect
         self.__optional_meta_data = False
 
         # We can't filter on packet level TABLE_MAP and rotate event because
@@ -605,7 +608,8 @@ class BinLogStreamReader(object):
                           A pymysql.OperationalError error occurred, Re-request the connection.
                         """,
                     )
-                    continue
+                    if not self.__fail_on_database_disconnect:
+                        continue
                 raise
 
             if pkt.is_eof_packet():
