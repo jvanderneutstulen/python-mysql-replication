@@ -190,6 +190,7 @@ class BinLogStreamReader(object):
         verify_checksum=False,
         enable_logging=True,
         use_column_name_cache=False,
+        fail_on_database_disconnect=False,
     ):
         """
         Attributes:
@@ -234,6 +235,7 @@ class BinLogStreamReader(object):
                             When set to False, logging is disabled to enhance performance.
             use_column_name_cache: If true, enables caching of column names from INFORMATION_SCHEMA
                             for MySQL 5.7 compatibility when binlog metadata is missing. Default is False.
+            fail_on_database_disconnect: Raise exception on database disconnect.
         """
 
         self.__connection_settings = connection_settings
@@ -257,6 +259,7 @@ class BinLogStreamReader(object):
         )
         self.__ignore_decode_errors = ignore_decode_errors
         self.__verify_checksum = verify_checksum
+        self.__fail_on_database_disconnect = fail_on_database_disconnect
         self.__optional_meta_data = False
         self.__enable_logging = enable_logging
         self.__use_column_name_cache = use_column_name_cache
@@ -609,7 +612,8 @@ class BinLogStreamReader(object):
                           A pymysql.OperationalError error occurred, Re-request the connection.
                         """,
                     )
-                    continue
+                    if not self.__fail_on_database_disconnect:
+                        continue
                 raise
 
             if pkt.is_eof_packet():
